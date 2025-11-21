@@ -1,3 +1,0 @@
-[submodule "vendor/faye"]
-	path = vendor/faye
-	url = https://github.com/faye/faye.git
