@@ -8,11 +8,16 @@ JS.Test.describe("Redis engine", function() { with(this) {
 
   after(function(resume) { with(this) {
     disconnect_engine()
-    var redis = require('redis').createClient(6379, 'localhost', {no_ready_check: true})
-    redis.auth(engineOpts.password)
-    redis.flushall(function() {
-      redis.end()
-      resume()
+    var redis = require('redis').createClient({
+      socket: { host: 'localhost', port: 6379 },
+      password: engineOpts.password,
+      legacyMode: true
+    })
+    redis.connect().then(function() {
+      redis.flushall(function() {
+        redis.quit()
+        resume()
+      })
     })
   }})
 

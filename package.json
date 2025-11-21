@@ -6,10 +6,10 @@
 , "license"         : "MIT"
 
 , "version"         : "0.2.0"
-, "engines"         : {"node": ">=0.4.0"}
+, "engines"         : {"node": ">=18.0.0"}
 , "main"            : "./faye-redis"
-, "dependencies"    : {"redis": ""}
-, "devDependencies" : {"jstest": ""}
+, "dependencies"    : {"redis": "^5.10.0"}
+, "devDependencies" : {"jstest": "", "faye": "^1.4.1"}
 
 , "scripts"         : {"test": "node spec/runner.js"}
 

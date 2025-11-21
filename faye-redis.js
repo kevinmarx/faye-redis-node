@@ -12,25 +12,39 @@ var Engine = function(server, options) {
 
   this._ns  = this._options.namespace || '';
 
-  if (socket) {
-    this._redis = redis.createClient(socket, {no_ready_check: true});
-    this._subscriber = redis.createClient(socket, {no_ready_check: true});
-  } else {
-    this._redis = redis.createClient(port, host, {no_ready_check: true});
-    this._subscriber = redis.createClient(port, host, {no_ready_check: true});
-  }
+  var clientOptions = {
+    database: db,
+    legacyMode: true
+  };
 
   if (auth) {
-    this._redis.auth(auth);
-    this._subscriber.auth(auth);
+    clientOptions.password = auth;
   }
-  this._redis.select(db);
-  this._subscriber.select(db);
+
+  if (socket) {
+    clientOptions.socket = { path: socket };
+    this._redis = redis.createClient(clientOptions);
+    this._subscriber = redis.createClient(clientOptions);
+  } else {
+    clientOptions.socket = { host: host, port: port };
+    this._redis = redis.createClient(clientOptions);
+    this._subscriber = redis.createClient(clientOptions);
+  }
+
+  var self = this;
+
+  // Connect clients
+  this._redis.connect().catch(function(err) {
+    self._server.error('Redis client connection error: ?', err);
+  });
+
+  this._subscriber.connect().catch(function(err) {
+    self._server.error('Redis subscriber connection error: ?', err);
+  });
 
   this._messageChannel = this._ns + '/notifications/messages';
   this._closeChannel   = this._ns + '/notifications/close';
 
-  var self = this;
   this._subscriber.subscribe(this._messageChannel);
   this._subscriber.subscribe(this._closeChannel);
   this._subscriber.on('message', function(topic, message) {
@@ -53,9 +67,14 @@ Engine.prototype = {
   LOCK_TIMEOUT:     120,
 
   disconnect: function() {
-    this._redis.end();
+    var self = this;
+    this._redis.quit().catch(function(err) {
+      self._server.error('Redis client disconnect error: ?', err);
+    });
     this._subscriber.unsubscribe();
-    this._subscriber.end();
+    this._subscriber.quit().catch(function(err) {
+      self._server.error('Redis subscriber disconnect error: ?', err);
+    });
     clearInterval(this._gc);
   },
 
